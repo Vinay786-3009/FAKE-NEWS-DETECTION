@@ -156,131 +156,131 @@ elif page == "News Analyzer":
             conf = res.get("prediction_confidence", res["confidence"])
             cred = res["credibility"]
 
-                # ----- Result card -----
-                if pred_label == "REAL":
-                    color, emoji = "#1f7a4d", "✅"
+            # ----- Result card -----
+            if pred_label == "REAL":
+                color, emoji = "#1f7a4d", "✅"
+            else:
+                color, emoji = "#b3392f", "⚠️"
+            st.markdown(
+                f"""
+                <div style="border-radius:12px;padding:26px;border:2px solid {color};
+                            background:linear-gradient(135deg,#ffffff,#f2f6ff);
+                            text-align:center">
+                  <div style="font-size:1rem;color:#5a6b85">Prediction</div>
+                  <div style="font-size:2.2rem;font-weight:800;color:{color}">
+                    {emoji} {pred_label}
+                  </div>
+                  <div style="margin-top:10px;color:#394b68">
+                    Model Confidence: <b>{conf*100:.1f}%</b> &nbsp;|&nbsp;
+                    Risk Level: <b>{res['risk']}</b>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "This is an ML classification of linguistic patterns, "
+                "NOT a verified truth judgement or official credibility "
+                "rating."
+            )
+
+            # ----- Credibility gauge -----
+            lc, rc = st.columns([1, 1])
+            with lc:
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number", value=cred,
+                    title={"text": "Credibility Score (model confidence)"},
+                    gauge={
+                        "axis": {"range": [0, 100]},
+                        "bar": {"color": "#1b2a4a"},
+                        "steps": [
+                            {"range": [0, 25], "color": "#e26a5f"},
+                            {"range": [25, 50], "color": "#f0a35e"},
+                            {"range": [50, 70], "color": "#f5d76e"},
+                            {"range": [70, 85], "color": "#a8d5a2"},
+                            {"range": [85, 100], "color": "#7cc47f"},
+                        ],
+                    },
+                ))
+                fig.update_layout(height=280, margin=dict(t=50, b=10))
+                st.plotly_chart(fig, use_container_width=True)
+            with rc:
+                st.markdown("#### Why this score?")
+                st.markdown(
+                    f"- Credibility score **{cred}/100** reflects how "
+                    "confident the model is that the text matches the "
+                    "patterns of its REAL training class.\n"
+                    f"- Risk level: **{res['risk']}** "
+                    "(0–25 Very High, 26–50 High, 51–70 Moderate, "
+                    "71–85 Low, 86–100 Very Low).\n"
+                    "- The score is a **model confidence indicator**, not "
+                    "an official credibility rating."
+                )
+
+            # ----- Why should you be cautious? -----
+            expl = res["explanation"]
+            st.markdown("### Why did the model make this prediction?")
+            if pred_label == "POTENTIALLY FAKE":
+                st.markdown("**Why should you be cautious?**")
+            st.markdown(
+                "The indicators below are *model-based* signals: words "
+                "whose weights pushed this specific article towards a "
+                "class. They do **not** prove the article is fake or real."
+            )
+            fcol, rcol = st.columns(2)
+            with fcol:
+                st.markdown("**Indicators towards POTENTIALLY FAKE**")
+                if expl["local_fake"]:
+                    lf = pd.DataFrame(expl["local_fake"],
+                                      columns=["Feature", "Weight"])
+                    fig_f = px.bar(lf.sort_values("Weight"),
+                                   x="Weight", y="Feature",
+                                   orientation="h",
+                                   title="Contributing features",
+                                   color_discrete_sequence=["#b3392f"])
+                    fig_f.update_layout(height=340)
+                    st.plotly_chart(fig_f, use_container_width=True)
                 else:
-                    color, emoji = "#b3392f", "⚠️"
+                    st.caption("No strong single-word signals in this text.")
+            with rcol:
+                st.markdown("**Indicators towards REAL**")
+                if expl["local_real"]:
+                    lr = pd.DataFrame(expl["local_real"],
+                                      columns=["Feature", "Weight"])
+                    fig_r = px.bar(lr.sort_values("Weight"),
+                                   x="Weight", y="Feature",
+                                   orientation="h",
+                                   title="Contributing features",
+                                   color_discrete_sequence=["#1f7a4d"])
+                    fig_r.update_layout(height=340)
+                    st.plotly_chart(fig_r, use_container_width=True)
+                else:
+                    st.caption("No strong single-word signals in this text.")
+
+            # Sensational-language context
+            sens = nlp_analysis.sensational_indicators(title_in, text_in)
+            with st.expander("📋 Sensational Language Indicators "
+                             "(context, not proof)"):
                 st.markdown(
-                    f"""
-                    <div style="border-radius:12px;padding:26px;border:2px solid {color};
-                                background:linear-gradient(135deg,#ffffff,#f2f6ff);
-                                text-align:center">
-                      <div style="font-size:1rem;color:#5a6b85">Prediction</div>
-                      <div style="font-size:2.2rem;font-weight:800;color:{color}">
-                        {emoji} {pred_label}
-                      </div>
-                      <div style="margin-top:10px;color:#394b68">
-                        Model Confidence: <b>{conf*100:.1f}%</b> &nbsp;|&nbsp;
-                        Risk Level: <b>{res['risk']}</b>
-                      </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                    "Excessive punctuation, capitals and charged "
+                    "vocabulary can be associated with low-quality or "
+                    "sensational content, but are **not** proof of "
+                    "misinformation."
                 )
-                st.caption(
-                    "This is an ML classification of linguistic patterns, "
-                    "NOT a verified truth judgement or official credibility "
-                    "rating."
-                )
-
-                # ----- Credibility gauge -----
-                lc, rc = st.columns([1, 1])
-                with lc:
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number", value=cred,
-                        title={"text": "Credibility Score (model confidence)"},
-                        gauge={
-                            "axis": {"range": [0, 100]},
-                            "bar": {"color": "#1b2a4a"},
-                            "steps": [
-                                {"range": [0, 25], "color": "#e26a5f"},
-                                {"range": [25, 50], "color": "#f0a35e"},
-                                {"range": [50, 70], "color": "#f5d76e"},
-                                {"range": [70, 85], "color": "#a8d5a2"},
-                                {"range": [85, 100], "color": "#7cc47f"},
-                            ],
-                        },
-                    ))
-                    fig.update_layout(height=280, margin=dict(t=50, b=10))
-                    st.plotly_chart(fig, use_container_width=True)
-                with rc:
-                    st.markdown("#### Why this score?")
-                    st.markdown(
-                        f"- Credibility score **{cred}/100** reflects how "
-                        "confident the model is that the text matches the "
-                        "patterns of its REAL training class.\n"
-                        f"- Risk level: **{res['risk']}** "
-                        "(0–25 Very High, 26–50 High, 51–70 Moderate, "
-                        "71–85 Low, 86–100 Very Low).\n"
-                        "- The score is a **model confidence indicator**, not "
-                        "an official credibility rating."
-                    )
-
-                # ----- Why should you be cautious? -----
-                expl = res["explanation"]
-                st.markdown("### Why did the model make this prediction?")
-                if pred_label == "POTENTIALLY FAKE":
-                    st.markdown("**Why should you be cautious?**")
+                flags = sens["flags"]
                 st.markdown(
-                    "The indicators below are *model-based* signals: words "
-                    "whose weights pushed this specific article towards a "
-                    "class. They do **not** prove the article is fake or real."
+                    f"- Exclamations: **{sens['exclamations']}**"
+                    f"{' ⚠️' if flags['excessive_exclamations'] else ''}\n"
+                    f"- Question marks: **{sens['questions']}**"
+                    f"{' ⚠️' if flags['excessive_questions'] else ''}\n"
+                    f"- Uppercase words: **{len(sens['uppercase_words'])}**"
+                    f"{' ⚠️' if flags['heavy_capitals'] else ''}\n"
+                    f"- Repeated punctuation (e.g. '!!!'): "
+                    f"**{len(sens['repeated_punctuation'])}**"
+                    f"{' ⚠️' if flags['repeated_punctuation'] else ''}\n"
+                    f"- Sensational vocabulary: "
+                    f"{', '.join(sens['sensational_words']) or '—'}"
                 )
-                fcol, rcol = st.columns(2)
-                with fcol:
-                    st.markdown("**Indicators towards POTENTIALLY FAKE**")
-                    if expl["local_fake"]:
-                        lf = pd.DataFrame(expl["local_fake"],
-                                          columns=["Feature", "Weight"])
-                        fig_f = px.bar(lf.sort_values("Weight"),
-                                       x="Weight", y="Feature",
-                                       orientation="h",
-                                       title="Contributing features",
-                                       color_discrete_sequence=["#b3392f"])
-                        fig_f.update_layout(height=340)
-                        st.plotly_chart(fig_f, use_container_width=True)
-                    else:
-                        st.caption("No strong single-word signals in this text.")
-                with rcol:
-                    st.markdown("**Indicators towards REAL**")
-                    if expl["local_real"]:
-                        lr = pd.DataFrame(expl["local_real"],
-                                          columns=["Feature", "Weight"])
-                        fig_r = px.bar(lr.sort_values("Weight"),
-                                       x="Weight", y="Feature",
-                                       orientation="h",
-                                       title="Contributing features",
-                                       color_discrete_sequence=["#1f7a4d"])
-                        fig_r.update_layout(height=340)
-                        st.plotly_chart(fig_r, use_container_width=True)
-                    else:
-                        st.caption("No strong single-word signals in this text.")
-
-                # Sensational-language context
-                sens = nlp_analysis.sensational_indicators(title_in, text_in)
-                with st.expander("📋 Sensational Language Indicators "
-                                 "(context, not proof)"):
-                    st.markdown(
-                        "Excessive punctuation, capitals and charged "
-                        "vocabulary can be associated with low-quality or "
-                        "sensational content, but are **not** proof of "
-                        "misinformation."
-                    )
-                    flags = sens["flags"]
-                    st.markdown(
-                        f"- Exclamations: **{sens['exclamations']}**"
-                        f"{' ⚠️' if flags['excessive_exclamations'] else ''}\n"
-                        f"- Question marks: **{sens['questions']}**"
-                        f"{' ⚠️' if flags['excessive_questions'] else ''}\n"
-                        f"- Uppercase words: **{len(sens['uppercase_words'])}**"
-                        f"{' ⚠️' if flags['heavy_capitals'] else ''}\n"
-                        f"- Repeated punctuation (e.g. '!!!'): "
-                        f"**{len(sens['repeated_punctuation'])}**"
-                        f"{' ⚠️' if flags['repeated_punctuation'] else ''}\n"
-                        f"- Sensational vocabulary: "
-                        f"{', '.join(sens['sensational_words']) or '—'}"
-                    )
 
 # ===========================================================================
 # NLP ANALYSIS
@@ -314,139 +314,139 @@ elif page == "NLP Analysis":
         stats = nlp_analysis.text_statistics(title_in, text_in)
 
         st.markdown("### 📊 Text Statistics")
-            k = st.columns(5)
-            items = [
-                ("Words", stats["word_count"]),
-                ("Characters", stats["char_count"]),
-                ("Sentences", stats["sentence_count"]),
-                ("Avg sentence length", stats["avg_sentence_length"]),
-                ("Avg word length", stats["avg_word_length"]),
-            ]
-            for col, (label, val) in zip(k, items):
-                with col:
-                    kpi_card(label, val)
-            k2 = st.columns(5)
-            items2 = [
-                ("Uppercase words", stats["uppercase_words"]),
-                ("Exclamation marks", stats["exclamation_marks"]),
-                ("Question marks", stats["question_marks"]),
-                ("URLs", stats["urls"]),
-                ("Numbers", stats["numbers"]),
-            ]
-            for col, (label, val) in zip(k2, items2):
-                with col:
-                    kpi_card(label, val)
+        k = st.columns(5)
+        items = [
+            ("Words", stats["word_count"]),
+            ("Characters", stats["char_count"]),
+            ("Sentences", stats["sentence_count"]),
+            ("Avg sentence length", stats["avg_sentence_length"]),
+            ("Avg word length", stats["avg_word_length"]),
+        ]
+        for col, (label, val) in zip(k, items):
+            with col:
+                kpi_card(label, val)
+        k2 = st.columns(5)
+        items2 = [
+            ("Uppercase words", stats["uppercase_words"]),
+            ("Exclamation marks", stats["exclamation_marks"]),
+            ("Question marks", stats["question_marks"]),
+            ("URLs", stats["urls"]),
+            ("Numbers", stats["numbers"]),
+        ]
+        for col, (label, val) in zip(k2, items2):
+            with col:
+                kpi_card(label, val)
 
-            # ---------------- Sentiment ----------------
-            sent = nlp_analysis.analyze_sentiment(full_text)
-            st.markdown("### 🎭 Sentiment")
-            sc, sc2 = st.columns([1, 2])
-            with sc:
-                color = {"Positive": "#1f7a4d", "Negative": "#b3392f",
-                         "Neutral": "#7a8aa0"}[sent["label"]]
-                st.markdown(
-                    f"""
-                    <div style="border-radius:10px;padding:18px;text-align:center;
-                                border:2px solid {color}">
-                      <div style="color:#5a6b85;font-size:0.9rem">Sentiment</div>
-                      <div style="font-size:1.8rem;font-weight:800;color:{color}">
-                        {sent['label']}</div>
-                      <div style="color:#394b68">Score: {sent['score']}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.caption("Sentiment is a linguistic characteristic and does "
-                           "not determine whether a news article is true or "
-                           "false.")
-            with sc2:
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number", value=sent["score"],
-                    title={"text": "Sentiment score (-1 to 1)"},
-                    gauge={"axis": {"range": [-1, 1]},
-                           "bar": {"color": "#1b2a4a"},
-                           "steps": [
-                               {"range": [-1, -0.05], "color": "#e26a5f"},
-                               {"range": [-0.05, 0.05], "color": "#d7dde8"},
-                               {"range": [0.05, 1], "color": "#7cc47f"}]},
-                ))
-                fig.update_layout(height=260, margin=dict(t=50, b=10))
-                st.plotly_chart(fig, use_container_width=True)
-            if sent["positive"] or sent["negative"]:
-                with st.expander("Matched sentiment words"):
-                    c1, c2 = st.columns(2)
-                    c1.markdown("**Positive:** " +
-                                (", ".join(sent["positive"]) or "—"))
-                    c2.markdown("**Negative:** " +
-                                (", ".join(sent["negative"]) or "—"))
-
-            # ---------------- Keywords ----------------
-            st.markdown("### 🔑 Top 10 Keywords")
-            kw = nlp_analysis.extract_keywords(full_text, top_n=10)
-            if kw:
-                kw_df = pd.DataFrame(kw, columns=["Keyword", "Frequency"])
-                kc1, kc2 = st.columns([2, 1])
-                with kc1:
-                    fig = px.bar(kw_df.sort_values("Frequency"), x="Frequency",
-                                 y="Keyword", orientation="h",
-                                 title="Keyword importance (frequency)",
-                                 color_discrete_sequence=["#4a6fa5"])
-                    fig.update_layout(height=400)
-                    st.plotly_chart(fig, use_container_width=True)
-                with kc2:
-                    for i, (word, count) in enumerate(kw, start=1):
-                        st.markdown(f"{i}. **{word}** ({count})")
-            else:
-                st.caption("No keywords could be extracted from this text.")
-
-            # ---------------- Charts ----------------
-            st.markdown("### 📈 Text Distribution Charts")
-            ch1, ch2 = st.columns(2)
-            with ch1:
-                sents_len = nlp_analysis.sentence_lengths(full_text)
-                if sents_len:
-                    fig = px.histogram(x=sents_len, nbins=15,
-                                       labels={"x": "Words per sentence"},
-                                       title="Sentence length distribution")
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.caption("No sentences detected.")
-            with ch2:
-                wf = nlp_analysis.word_frequencies(full_text, top_n=15)
-                if wf:
-                    wf_df = pd.DataFrame(wf, columns=["Word", "Count"])
-                    fig = px.bar(wf_df.sort_values("Count"), x="Count",
-                                 y="Word", orientation="h",
-                                 title="Most common words",
-                                 color_discrete_sequence=["#6a8caf"])
-                    st.plotly_chart(fig, use_container_width=True)
-
-            # ---------------- Sensational language ----------------
-            st.markdown("### 🚨 Sensational Language Indicators")
-            sens = nlp_analysis.sensational_indicators(title_in, text_in)
+        # ---------------- Sentiment ----------------
+        sent = nlp_analysis.analyze_sentiment(full_text)
+        st.markdown("### 🎭 Sentiment")
+        sc, sc2 = st.columns([1, 2])
+        with sc:
+            color = {"Positive": "#1f7a4d", "Negative": "#b3392f",
+                     "Neutral": "#7a8aa0"}[sent["label"]]
             st.markdown(
-                "These linguistic patterns can be associated with low-quality "
-                "or sensational content, but they are **not** proof of "
-                "misinformation."
+                f"""
+                <div style="border-radius:10px;padding:18px;text-align:center;
+                            border:2px solid {color}">
+                  <div style="color:#5a6b85;font-size:0.9rem">Sentiment</div>
+                  <div style="font-size:1.8rem;font-weight:800;color:{color}">
+                    {sent['label']}</div>
+                  <div style="color:#394b68">Score: {sent['score']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            f1, f2, f3 = st.columns(3)
-            with f1:
-                kpi_card("Exclamations", sens["exclamations"])
-            with f2:
-                kpi_card("Question marks", sens["questions"])
-            with f3:
-                kpi_card("Repeated punctuation", len(sens["repeated_punctuation"]))
-            f4, f5, f6 = st.columns(3)
-            with f4:
-                kpi_card("Uppercase words", len(sens["uppercase_words"]))
-            with f5:
-                kpi_card("Sensational words", len(sens["sensational_words"]))
-            with f6:
-                kpi_card("Indicator intensity", f"{sens['intensity']}/100")
-            st.caption("Flags triggered: " +
-                       (", ".join(k.replace("_", " ").title()
-                                  for k, v in sens["flags"].items() if v)
-                        or "none"))
+            st.caption("Sentiment is a linguistic characteristic and does "
+                       "not determine whether a news article is true or "
+                       "false.")
+        with sc2:
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number", value=sent["score"],
+                title={"text": "Sentiment score (-1 to 1)"},
+                gauge={"axis": {"range": [-1, 1]},
+                       "bar": {"color": "#1b2a4a"},
+                       "steps": [
+                           {"range": [-1, -0.05], "color": "#e26a5f"},
+                           {"range": [-0.05, 0.05], "color": "#d7dde8"},
+                           {"range": [0.05, 1], "color": "#7cc47f"}]},
+            ))
+            fig.update_layout(height=260, margin=dict(t=50, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+        if sent["positive"] or sent["negative"]:
+            with st.expander("Matched sentiment words"):
+                c1, c2 = st.columns(2)
+                c1.markdown("**Positive:** " +
+                            (", ".join(sent["positive"]) or "—"))
+                c2.markdown("**Negative:** " +
+                            (", ".join(sent["negative"]) or "—"))
+
+        # ---------------- Keywords ----------------
+        st.markdown("### 🔑 Top 10 Keywords")
+        kw = nlp_analysis.extract_keywords(full_text, top_n=10)
+        if kw:
+            kw_df = pd.DataFrame(kw, columns=["Keyword", "Frequency"])
+            kc1, kc2 = st.columns([2, 1])
+            with kc1:
+                fig = px.bar(kw_df.sort_values("Frequency"), x="Frequency",
+                             y="Keyword", orientation="h",
+                             title="Keyword importance (frequency)",
+                             color_discrete_sequence=["#4a6fa5"])
+                fig.update_layout(height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            with kc2:
+                for i, (word, count) in enumerate(kw, start=1):
+                    st.markdown(f"{i}. **{word}** ({count})")
+        else:
+            st.caption("No keywords could be extracted from this text.")
+
+        # ---------------- Charts ----------------
+        st.markdown("### 📈 Text Distribution Charts")
+        ch1, ch2 = st.columns(2)
+        with ch1:
+            sents_len = nlp_analysis.sentence_lengths(full_text)
+            if sents_len:
+                fig = px.histogram(x=sents_len, nbins=15,
+                                   labels={"x": "Words per sentence"},
+                                   title="Sentence length distribution")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("No sentences detected.")
+        with ch2:
+            wf = nlp_analysis.word_frequencies(full_text, top_n=15)
+            if wf:
+                wf_df = pd.DataFrame(wf, columns=["Word", "Count"])
+                fig = px.bar(wf_df.sort_values("Count"), x="Count",
+                             y="Word", orientation="h",
+                             title="Most common words",
+                             color_discrete_sequence=["#6a8caf"])
+                st.plotly_chart(fig, use_container_width=True)
+
+        # ---------------- Sensational language ----------------
+        st.markdown("### 🚨 Sensational Language Indicators")
+        sens = nlp_analysis.sensational_indicators(title_in, text_in)
+        st.markdown(
+            "These linguistic patterns can be associated with low-quality "
+            "or sensational content, but they are **not** proof of "
+            "misinformation."
+        )
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            kpi_card("Exclamations", sens["exclamations"])
+        with f2:
+            kpi_card("Question marks", sens["questions"])
+        with f3:
+            kpi_card("Repeated punctuation", len(sens["repeated_punctuation"]))
+        f4, f5, f6 = st.columns(3)
+        with f4:
+            kpi_card("Uppercase words", len(sens["uppercase_words"]))
+        with f5:
+            kpi_card("Sensational words", len(sens["sensational_words"]))
+        with f6:
+            kpi_card("Indicator intensity", f"{sens['intensity']}/100")
+        st.caption("Flags triggered: " +
+                   (", ".join(k.replace("_", " ").title()
+                              for k, v in sens["flags"].items() if v)
+                    or "none"))
 
 # ===========================================================================
 # MODEL PERFORMANCE
