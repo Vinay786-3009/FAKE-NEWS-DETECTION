@@ -1,0 +1,57 @@
+{
+  "best_model_name": "Logistic Regression",
+  "best_model": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "confusion_matrix": [
+    [
+      117,
+      0
+    ],
+    [
+      0,
+      120
+    ]
+  ],
+  "supports_proba": true,
+  "comparison": [
+    {
+      "name": "Logistic Regression",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "name": "Linear SVM (LinearSVC)",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  ],
+  "dataset": {
+    "total_articles": 1183,
+    "train_samples": 946,
+    "test_samples": 237,
+    "features": 1137,
+    "class_balance": {
+      "REAL": 600,
+      "FAKE": 583
+    }
+  },
+  "vectorizer_settings": {
+    "max_features": 20000,
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 2,
+    "max_df": 0.9,
+    "sublinear_tf": true
+  },
+  "random_state": 42
+}
